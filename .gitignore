@@ -1,11 +1,12 @@
-# Maven #
-target/
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# IDEA #
+# Docker
+*.log
+
+# IDE
 .idea/
+.vscode/
 *.iml
-
-# Eclipse #
-.settings/
-.classpath
-.project
