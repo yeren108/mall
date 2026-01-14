@@ -1,0 +1,15 @@
+FROM openjdk:8-jdk-alpine
+
+# 设置时区
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 复制 JAR 文件（构建后生成）
+COPY mall-portal/target/mall-portal-1.0-SNAPSHOT.jar /app.jar
+
+# 暴露端口
+EXPOSE 8085
+
+# 启动应用
+ENTRYPOINT ["java", "-jar", "/app.jar"]

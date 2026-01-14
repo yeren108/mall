@@ -1,0 +1,212 @@
+version: '3.8'
+
+# Mall 电商系统 - 本地开发环境 Docker Compose
+# 适用于: Windows / macOS / Linux
+# 一键启动全部服务
+
+services:
+  # ==================== 应用服务 ====================
+
+  mall-admin:
+    image: mall/mall-admin:latest
+    container_name: mall-admin
+    build:
+      context: ../../
+      dockerfile: deployment/local/Dockerfile.mall-admin
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - ../../mall-admin/src/main/resources/application-docker.yml:/app/config/application-docker.yml:ro
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - mall-network
+
+  mall-portal:
+    image: mall/mall-portal:latest
+    container_name: mall-portal
+    build:
+      context: ../../
+      dockerfile: deployment/local/Dockerfile.mall-portal
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms768m -Xmx768m
+    volumes:
+      - ../../mall-portal/src/main/resources/application-docker.yml:/app/config/application-docker.yml:ro
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mongo:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - mall-network
+
+  mall-search:
+    image: mall/mall-search:latest
+    container_name: mall-search
+    build:
+      context: ../../
+      dockerfile: deployment/local/Dockerfile.mall-search
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - ../../mall-search/src/main/resources/application-docker.yml:/app/config/application-docker.yml:ro
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - mall-network
+
+  # ==================== 数据库服务 ====================
+
+  mysql:
+    image: mysql:5.7
+    container_name: mall-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=mall
+      - TZ=Asia/Shanghai
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-time-zone=+08:00
+    restart: unless-stopped
+    networks:
+      - mall-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mall-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass admin --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - mall-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  mongo:
+    image: mongo:4.4
+    container_name: mall-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=mall-port
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - mall-network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ==================== 中间件服务 ====================
+
+  rabbitmq:
+    image: rabbitmq:3.11-management-alpine
+    container_name: mall-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=mall
+      - RABBITMQ_DEFAULT_PASS=mall
+      - RABBITMQ_DEFAULT_VHOST=/mall
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - mall-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  elasticsearch:
+    image: elasticsearch:7.17.3
+    container_name: mall-elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - cluster.name=mall-cluster
+      - node.name=mall-node-1
+      - bootstrap.memory_lock=false
+      - xpack.security.enabled=false
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - mall-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==================== 数据库管理工具（可选）====================
+  # 取消注释以下服务可启动数据库管理界面
+
+  # adminer:
+  #   image: adminer:latest
+  #   container_name: mall-adminer
+  #   ports:
+  #     - "8082:8080"
+  #   restart: unless-stopped
+  #   networks:
+  #     - mall-network
+
+networks:
+  mall-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  mongo-data:
+  rabbitmq-data:
+  es-data:

@@ -36,17 +36,10 @@
 
 前端项目`mall-admin-web`地址：https://github.com/yeren108/mall-admin-web
 
-项目演示地址： [https://www.macrozheng.com/admin/index.html](https://www.macrozheng.com/admin/index.html)  
-
-![后台管理系统功能演示](./document/resource/mall_admin_show.png)
 
 #### 前台商城系统
 
 前端项目`mall-app-web`地址：https://github.com/yeren108/mall-app-web
-
-项目演示地址（将浏览器切换为手机模式效果更佳）：[https://www.macrozheng.com/app/](https://www.macrozheng.com/app/)
-
-![前台商城系统功能演示](./document/resource/re_mall_app_show.jpg)
 
 ### 组织结构
 
@@ -194,14 +187,8 @@ mall
 - 本项目使用Docker Compose请参考： [mall在Linux环境下的部署（基于Docker Compose）](https://www.macrozheng.com/mall/deploy/mall_deploy_docker_compose.html);
 - 本项目在Linux下的自动化部署请参考：[mall在Linux环境下的自动化部署（基于Jenkins）](https://www.macrozheng.com/mall/deploy/mall_deploy_jenkins.html);
 
-## 公众号
-
-加微信群交流，关注公众号「**macrozheng**」，回复「**加群**」即可。
-
-![公众号图片](./document/resource/qrcode_for_macrozheng_258.jpg)
 
 ## 许可证
 
 [Apache License 2.0](https://github.com/macrozheng/mall/blob/master/LICENSE)
 
-Copyright (c) 2018-2025 macrozheng

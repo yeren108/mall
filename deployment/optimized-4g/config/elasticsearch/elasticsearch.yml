@@ -1,0 +1,173 @@
+# =============================================================================
+# Mall 电商系统 - Elasticsearch 7.17 优化配置 (2核4G 服务器)
+# 内存分配: 约 800MB (JVM 堆内存)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 集群配置
+# -----------------------------------------------------------------------------
+cluster.name: "mall-cluster"
+node.name: "mall-node-1"
+
+# -----------------------------------------------------------------------------
+# 节点配置
+# -----------------------------------------------------------------------------
+# 单节点模式（节省资源）
+discovery.type: single-node
+
+# 禁用多播
+discovery.zen.ping.multicast.enabled: false
+
+# -----------------------------------------------------------------------------
+# 网络配置
+# -----------------------------------------------------------------------------
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+
+# -----------------------------------------------------------------------------
+# 内存配置 (关键优化)
+# -----------------------------------------------------------------------------
+# 注意: 这里只是禁用内存锁，实际的 JVM 内存由容器环境变量控制
+# ES_JAVA_OPTS=-Xms800m -Xmx800m -Xmn256m
+bootstrap.memory_lock: false
+
+# -----------------------------------------------------------------------------
+# 索引配置 (节省内存)
+# -----------------------------------------------------------------------------
+# 默认分片数
+index.number_of_shards: 1
+
+# 默认副本数 (单节点设为 0)
+index.number_of_replicas: 0
+
+# 压缩算法 (节省存储空间)
+index.codec: best_compression
+
+# 索引缓冲区大小
+indices.memory.index_buffer_size: 50mb
+indices.memory.min_index_buffer_size: 10mb
+
+# 查询缓存
+indices.queries.cache.size: 5%
+indices.queries.cache.expire.enabled: true
+
+# 请求缓存
+indices.requests.cache.size: 3%
+
+# 字段数据缓存
+indices.fielddata.cache.size: 10%
+
+# -----------------------------------------------------------------------------
+# 线程池配置 (优化并发)
+# -----------------------------------------------------------------------------
+thread_pool:
+  # 写入线程池
+  write:
+    queue_size: 500
+    size: 2
+
+  # 搜索线程池
+  search:
+    queue_size: 500
+    size: 3
+
+  # 通用线程池
+  generic:
+    queue_size: 200
+    size: 4
+
+  # 获取线程池
+  get:
+    queue_size: 200
+    size: 2
+
+  # 分析线程池
+  analyze:
+    queue_size: 100
+    size: 1
+
+# -----------------------------------------------------------------------------
+# 查询配置
+# -----------------------------------------------------------------------------
+# 默认搜索结果数量
+index.max_result_window: 10000
+
+# 最大分片大小
+indices.fielddata.cache.size: 15%
+
+# -----------------------------------------------------------------------------
+# 文件存储配置
+# -----------------------------------------------------------------------------
+# 锁定内存交换
+bootstrap.memory_lock: false
+
+# 最大文件描述符
+# 需要在系统层面配置: ulimit -n 65536
+# bootstrap.system_call_filter: false
+
+# -----------------------------------------------------------------------------
+# 路由配置 (磁盘管理)
+# -----------------------------------------------------------------------------
+# 禁用磁盘分配决策 (避免因磁盘空间不足导致的分片未分配)
+cluster.routing.allocation.disk.threshold_enabled: false
+
+# 磁盘水印 (默认配置，供参考)
+# cluster.routing.allocation.disk.watermark.low: 85%
+# cluster.routing.allocation.disk.watermark.high: 90%
+# cluster.routing.allocation.disk.watermark.flood_stage: 95%
+
+# -----------------------------------------------------------------------------
+# 缓存配置
+# -----------------------------------------------------------------------------
+# 字段缓存
+indices.query.bool.max_clause_count: 1024
+
+# 请求超时
+http.max_content_length: 100mb
+
+# -----------------------------------------------------------------------------
+# 其他优化
+# -----------------------------------------------------------------------------
+# 禁用安全认证 (节省资源)
+xpack.security.enabled: false
+xpack.security.http.ssl.enabled: false
+xpack.security.transport.ssl.enabled: false
+
+# 禁用监控
+xpack.monitoring.enabled: false
+xpack.monitoring.collection.enabled: false
+
+# 禁用机器学习
+xpack.ml.enabled: false
+
+# 禁用报警
+xpack.watcher.enabled: false
+
+# 禁用 SQL 功能
+xpack.sql.enabled: false
+
+# 禁用 Rollup 功能
+xpack.rollup.enabled: false
+
+# -----------------------------------------------------------------------------
+# 日志配置
+# -----------------------------------------------------------------------------
+# 日志级别: TRACE, DEBUG, INFO, WARN, ERROR
+# logger.level: INFO
+
+# 慢日志阈值
+index.search.slowlog.threshold.query.warn: 10s
+index.search.slowlog.threshold.query.info: 5s
+index.search.slowlog.threshold.query.debug: 2s
+index.search.slowlog.threshold.query.trace: 500ms
+
+index.search.slowlog.threshold.fetch.warn: 1s
+index.search.slowlog.threshold.fetch.info: 800ms
+index.search.slowlog.threshold.fetch.debug: 500ms
+index.search.slowlog.threshold.fetch.trace: 200ms
+
+index.indexing.slowlog.threshold.index.warn: 10s
+index.indexing.slowlog.threshold.index.info: 5s
+index.indexing.slowlog.threshold.index.debug: 2s
+index.indexing.slowlog.threshold.index.trace: 500ms
