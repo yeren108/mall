@@ -183,11 +183,65 @@ model/         - 数据库实体类及 Example 类（用于复杂查询）
 - **数据库**: MySQL 5.7, Druid 连接池, PageHelper 分页插件
 - **缓存**: Redis 7.0
 - **搜索**: Elasticsearch 7.17.3
-- **消息队列**: RabbitMQ 3.10.5
+- **消息队列**: RabbitMQ 3.10.5（仅 mall-portal 模块使用，见下方 RabbitMQ 使用说明）
 - **NoSQL**: MongoDB 5.0
 - **文件存储**: MinIO 8.4.5, 阿里云 OSS
 - **工具库**: Hutool 5.8.9, Lombok
 - **日志**: Logback + Logstash
+
+## RabbitMQ 使用说明
+
+### 概述
+
+RabbitMQ 在该项目中仅用于 `mall-portal` 模块（前台商城系统），实现**订单超时自动取消**功能。
+
+### 核心文件
+
+| 文件路径 | 作用 |
+|----------|------|
+| `mall-portal/src/main/java/com/macro/mall/portal/config/RabbitMqConfig.java` | RabbitMQ 配置类，定义交换机、队列及绑定关系 |
+| `mall-portal/src/main/java/com/macro/mall/portal/component/CancelOrderSender.java` | 消息发送者，发送延时取消订单消息 |
+| `mall-portal/src/main/java/com/macro/mall/portal/component/CancelOrderReceiver.java` | 消息消费者，监听队列并处理取消订单 |
+| `mall-portal/src/main/java/com/macro/mall/portal/domain/QueueEnum.java` | 队列枚举定义 |
+
+### 架构设计
+
+```
+mall.order.direct.ttl (TTL交换机)
+    ↓
+mall.order.cancel.ttl (延时队列，设置死信交换机)
+    ↓ (消息过期后)
+mall.order.direct (死信交换机)
+    ↓
+mall.order.cancel (消费队列)
+    ↓
+CancelOrderReceiver (消费者)
+```
+
+### 配置参数
+
+| 环境配置 | 地址 |
+|----------|------|
+| 开发环境 (`application-dev.yml`) | localhost:5672 |
+| 生产环境 (`application-prod.yml`) | rabbit:5672 |
+| 虚拟主机 | `/mall` |
+| 管理界面端口 | 15672 |
+
+### 工作流程
+
+1. **订单创建**：用户下单后，订单状态为"待支付"(status=0)
+2. **发送延时消息**：将订单 ID 发送到 TTL 延时队列，超时时间从 `OmsOrderSetting` 表读取（单位：分钟）
+3. **消息过期转发**：超时后消息通过死信交换机自动转发到消费队列
+4. **执行取消操作**：消费者 `CancelOrderReceiver` 接收消息并执行：
+   - 修改订单状态为已取消 (status=4)
+   - 释放商品库存锁
+   - 恢复优惠券状态为可用
+   - 退还使用的积分
+
+### 关键代码位置
+
+- **消息发送**: `OmsPortalOrderServiceImpl.java:247` - `generateOrder()` 调用 `sendDelayMessageCancelOrder()`
+- **取消逻辑**: `OmsPortalOrderServiceImpl.java:267` - `cancelOrder()` 实现完整取消流程
 
 ## 重要约定
 
