@@ -1,0 +1,110 @@
+version: '3'
+
+services:
+  # 后台管理系统
+  mall-admin:
+    image: ${REGISTRY:-registry.cn-shanghai.aliyuncs.com/mall}/mall-admin:${VERSION:-latest}
+    container_name: mall-admin
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-mall}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - OSS_ENDPOINT=${OSS_ENDPOINT}
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+      - OSS_BUCKET_NAME=${OSS_BUCKET_NAME}
+    volumes:
+      - /opt/mall/logs/mall-admin:/var/logs
+      - /opt/mall/config:/etc/mall/config:ro
+    restart: unless-stopped
+    networks:
+      - mall-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # 前台商城系统
+  mall-portal:
+    image: ${REGISTRY:-registry.cn-shanghai.aliyuncs.com/mall}/mall-portal:${VERSION:-latest}
+    container_name: mall-portal
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-mall}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT:-27017}
+      - MONGO_DATABASE=${MONGO_DATABASE:-mall-port}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MQ_HOST=${MQ_HOST}
+      - MQ_PORT=${MQ_PORT:-5672}
+      - MQ_VHOST=${MQ_VHOST:-/mall}
+      - MQ_USER=${MQ_USER}
+      - MQ_PASSWORD=${MQ_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - /opt/mall/logs/mall-portal:/var/logs
+    restart: unless-stopped
+    networks:
+      - mall-network
+    depends_on:
+      - mall-admin
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # 商品搜索服务
+  mall-search:
+    image: ${REGISTRY:-registry.cn-shanghai.aliyuncs.com/mall}/mall-search:${VERSION:-latest}
+    container_name: mall-search
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-mall}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ES_HOST=${ES_HOST}
+      - ES_PORT=${ES_PORT:-9200}
+    volumes:
+      - /opt/mall/logs/mall-search:/var/logs
+    restart: unless-stopped
+    networks:
+      - mall-network
+    depends_on:
+      - mall-admin
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+networks:
+  mall-network:
+    driver: bridge
